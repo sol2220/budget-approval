@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>예산 사용현황</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body { font-family: Arial; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .box { background: white; padding: 40px; border-radius: 12px; width: 100%; max-width: 500px; }
+        h1 { font-size: 26px; color: #333; margin-bottom: 5px; }
+        p { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .notice-alert { background: #ff6b6b; border: 2px solid #ff0000; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        .notice-alert.show { display: block; }
+        .notice-title { color: white; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+        .notice-text { color: white; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+        .sec { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e0e0e0; }
+        label { display: block; font-weight: 600; color: #666; margin-bottom: 8px; font-size: 13px; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; font-size: 14px; box-sizing: border-box; }
+        select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; font-size: 14px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; margin-bottom: 8px; }
+        .btn-ok { background: #667eea; color: white; }
+        .btn-ok:hover { background: #5568d3; }
+        .btn-off { background: #ccc; color: #999; cursor: not-allowed; }
+        .stats { display: flex; gap: 12px; margin-bottom: 15px; }
+        .stat { background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0; text-align: center; flex: 1; }
+        .num { font-size: 24px; font-weight: 700; color: #667eea; }
+        .txt { font-size: 12px; color: #888; margin-top: 4px; }
+        .pop { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+        .pop.on { display: flex; align-items: center; justify-content: center; }
+        .card { background: white; padding: 30px; border-radius: 12px; text-align: center; width: 90%; max-width: 350px; }
+        .card p { margin: 0 0 20px 0; font-size: 16px; color: #333; line-height: 1.6; }
+        .modal-btns { display: flex; gap: 10px; }
+        .modal-btns button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .ok-btn { background: #667eea; color: white; }
+        .no-btn { background: #f0f0f0; color: #333; }
+        .ok-btn:hover { background: #5568d3; }
+        .no-btn:hover { background: #e0e0e0; }
+        .admin-sec { display: none !important; }
+        .admin-sec.show { display: block !important; }
+        .reset-btn { background: #ef4444; color: white; }
+        .reset-btn:hover { background: #dc2626; }
+        .add-btn { background: #10b981; color: white; }
+        .add-btn:hover { background: #059669; }
+        textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: Arial; font-size: 13px; resize: vertical; min-height: 80px; margin-bottom: 8px; }
+        .btn-small { width: 48%; padding: 8px; font-size: 12px; }
+        .btn-save { background: #10b981; color: white; }
+        .btn-save:hover { background: #059669; }
+        .btn-cancel { background: #f0f0f0; color: #333; }
+        .team-list { max-height: 150px; overflow-y: auto; margin-bottom: 15px; background: white; border: 1px solid #ddd; border-radius: 6px; padding: 10px; }
+        .team-item { padding: 8px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+        .team-del { background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; }
+        .team-del:hover { background: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div id="notice" class="notice-alert">
+            <div class="notice-title">⚠️ 중요 공지사항</div>
+            <div class="notice-text" id="noticetext"></div>
+        </div>
+
+        <h1>예산 사용현황</h1>
+        <p id="msg"></p>
+        
+        <div class="sec">
+            <label>팀/파트 선택</label>
+            <select id="sel">
+                <option value="">팀/파트를 선택하세요</option>
+            </select>
+            <button class="btn-off" id="btn">예산 사용 완료</button>
+        </div>
+
+        <div class="sec">
+            <h3 style="margin-bottom:15px;">완료 현황</h3>
+            <div class="stats">
+                <div class="stat">
+                    <div class="num" id="cnt">0</div>
+                    <div class="txt">완료</div>
+                </div>
+                <div class="stat">
+                    <div class="num" id="total">0</div>
+                    <div class="txt">전체</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-sec" id="admin">
+            <div class="sec">
+                <h3 style="margin-bottom:15px;">🔐 관리자 메뉴</h3>
+                
+                <h4 style="color:#667eea; margin-bottom:10px;">📋 팀/파트 관리</h4>
+                <input type="text" id="team-input" placeholder="새로운 팀/파트 이름 입력">
+                <button class="add-btn" onclick="addTeam()">팀/파트 추가</button>
+                
+                <label style="margin-top:15px; margin-bottom:8px;">현재 팀/파트 목록</label>
+                <div class="team-list" id="team-list"></div>
+                
+                <h4 style="color:#667eea; margin-bottom:10px; margin-top:15px;">📢 공지사항 작성</h4>
+                <textarea id="notice-input" placeholder="공지사항을 입력하세요&#10;예: 9월 30일까지 부탁드립니다"></textarea>
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <button class="btn-save btn-small" onclick="saveNotice()">저장</button>
+                    <button class="btn-cancel btn-small" onclick="deleteNotice()">삭제</button>
+                </div>
+                
+                <button class="reset-btn" style="margin-top:15px;" id="resetbtn">데이터 초기화</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pop" id="dlg">
+        <div class="card">
+            <p id="txt"></p>
+            <div class="modal-btns">
+                <button class="no-btn" onclick="no()">취소</button>
+                <button class="ok-btn" onclick="ok()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pop" id="reset-dlg">
+        <div class="card">
+            <p>정말 모든 데이터를 초기화하시겠습니까?<br><br>초기화되면 복구할 수 없습니다.</p>
+            <div class="modal-btns">
+                <button class="no-btn" onclick="cancelReset()">취소</button>
+                <button class="reset-btn" onclick="confirmReset()">초기화</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var parts = [
+            {name: 'AI특허개발파트', manager: '여재영 파트장'},
+            {name: '선행특허개발파트', manager: '최보근 파트장'},
+            {name: '선행특허Lab', manager: '전용준 랩장'},
+            {name: '특허개발파트', manager: '정철호 파트장'},
+            {name: 'IP분석대응파트', manager: '손광섭 파트장'},
+            {name: '분쟁대응파트', manager: '유보현 파트장'},
+            {name: 'IP혁신파트', manager: '오훈철 파트장'},
+            {name: '기획파트', manager: '김진우 파트장'},
+            {name: '특허개발파트(CA)', manager: '나효석'},
+            {name: 'IP분석대응파트(CA)', manager: '조재완'},
+            {name: '분쟁대응(CA)', manager: '신흥식'},
+            {name: 'IP혁신파트(CA)', manager: '김문수'},
+            {name: '선행Lab(CA)', manager: '심재규'},
+            {name: '기획파트(CA)', manager: '박태건'}
+        ];
+        var done = [false, false, false, false, false, false, false, false, false, false, false, false, false, false];
+        var sel = '';
+        var isAdmin = false;
+
+        function load() {
+            try {
+                var p = localStorage.getItem('budget_parts');
+                if (p) parts = JSON.parse(p);
+            } catch(e) {}
+            
+            try {
+                var d = localStorage.getItem('budget_data');
+                if (d) done = JSON.parse(d);
+            } catch(e) {}
+            
+            if (done.length !== parts.length) {
+                done = parts.map(() => false);
+            }
+            
+            var today = new Date();
+            var currentMonth = today.getFullYear() + '-' + (today.getMonth() + 1);
+            var lastMonth = '';
+            
+            try {
+                lastMonth = localStorage.getItem('budget_month') || '';
+            } catch(e) {}
+            
+            if (lastMonth !== currentMonth && today.getDate() === 1) {
+                done = parts.map(() => false);
+                try {
+                    localStorage.setItem('budget_data', JSON.stringify(done));
+                    localStorage.setItem('budget_month', currentMonth);
+                } catch(e) {}
+            } else if (lastMonth === '') {
+                try {
+                    localStorage.setItem('budget_month', currentMonth);
+                } catch(e) {}
+            }
+            
+            showNotice();
+            updateSelect();
+            show();
+        }
+
+        function save() {
+            try {
+                localStorage.setItem('budget_data', JSON.stringify(done));
+                localStorage.setItem('budget_parts', JSON.stringify(parts));
+            } catch(e) {}
+        }
+
+        function updateSelect() {
+            var sel_el = document.getElementById('sel');
+            sel_el.innerHTML = '<option value="">팀/파트를 선택하세요</option>';
+            for (var i = 0; i < parts.length; i++) {
+                var opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = parts[i].name;
+                sel_el.appendChild(opt);
+            }
+        }
+
+        function addTeam() {
+            var input = document.getElementById('team-input');
+            var name = input.value.trim();
+            if (!name) {
+                alert('팀/파트 이름을 입력하세요!');
+                return;
+            }
+            parts.push({name: name, manager: ''});
+            done.push(false);
+            save();
+            input.value = '';
+            updateSelect();
+            show();
+            showTeamList();
+            alert('팀/파트가 추가되었습니다!');
+        }
+
+        function deleteTeam(idx) {
+            if (confirm(parts[idx].name + '을(를) 삭제하시겠습니까?')) {
+                parts.splice(idx, 1);
+                done.splice(idx, 1);
+                save();
+                updateSelect();
+                show();
+                showTeamList();
+                alert('팀/파트가 삭제되었습니다!');
+            }
+        }
+
+        function showTeamList() {
+            var html = '';
+            for (var i = 0; i < parts.length; i++) {
+                html += '<div class="team-item">' + parts[i].name + ' <button class="team-del" onclick="deleteTeam(' + i + ')">삭제</button></div>';
+            }
+            document.getElementById('team-list').innerHTML = html;
+        }
+
+        function saveNotice() {
+            var text = document.getElementById('notice-input').value;
+            try {
+                localStorage.setItem('budget_notice', text);
+            } catch(e) {}
+            alert('공지사항이 저장되었습니다!');
+            showNotice();
+        }
+
+        function deleteNotice() {
+            try {
+                localStorage.removeItem('budget_notice');
+            } catch(e) {}
+            document.getElementById('notice-input').value = '';
+            alert('공지사항이 삭제되었습니다!');
+            showNotice();
+        }
+
+        function showNotice() {
+            try {
+                var notice = localStorage.getItem('budget_notice') || '';
+                if (isAdmin) {
+                    document.getElementById('notice-input').value = notice;
+                }
+                if (notice) {
+                    document.getElementById('notice').className = 'notice-alert show';
+                    document.getElementById('noticetext').textContent = notice;
+                } else {
+                    document.getElementById('notice').className = 'notice-alert';
+                }
+            } catch(e) {}
+        }
+
+        function show() {
+            var c = 0;
+            
+            for (var i = 0; i < parts.length; i++) {
+                if (done[i]) c++;
+            }
+            
+            document.getElementById('cnt').textContent = c;
+            document.getElementById('total').textContent = parts.length;
+        }
+
+        document.getElementById('msg').textContent = new Date().getMonth() + 1 + '월 예산을 모두 사용하셨다면 아래 버튼을 눌러주세요.';
+
+        document.getElementById('sel').onchange = function() {
+            var btn = document.getElementById('btn');
+            if (this.value !== '') {
+                btn.className = 'btn-ok';
+                sel = this.value;
+            } else {
+                btn.className = 'btn-off';
+                sel = '';
+            }
+        };
+
+        document.getElementById('btn').onclick = function() {
+            if (sel === '') return;
+            var idx = parseInt(sel);
+            var modalText = parts[idx].name + '-' + parts[idx].manager + '님';
+            document.getElementById('txt').innerHTML = modalText + '<br>이번달 예산을 다 사용하셨습니까?';
+            document.getElementById('dlg').className = 'pop on';
+        };
+
+        function no() {
+            document.getElementById('dlg').className = 'pop';
+        }
+
+        function ok() {
+            var idx = parseInt(sel);
+            done[idx] = true;
+            save();
+            no();
+            alert('저장되었습니다!');
+            document.getElementById('sel').value = '';
+            document.getElementById('btn').className = 'btn-off';
+            sel = '';
+            show();
+        }
+
+        document.getElementById('resetbtn').onclick = function() {
+            document.getElementById('reset-dlg').className = 'pop on';
+        };
+
+        function cancelReset() {
+            document.getElementById('reset-dlg').className = 'pop';
+        }
+
+        function confirmReset() {
+            done = parts.map(() => false);
+            save();
+            document.getElementById('reset-dlg').className = 'pop';
+            alert('데이터가 초기화되었습니다!');
+            show();
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+                e.preventDefault();
+                var pass = prompt('관리자 비밀번호:');
+                if (pass && pass.toUpperCase() === 'C10D9760') {
+                    isAdmin = true;
+                    document.getElementById('admin').className = 'admin-sec show';
+                    showNotice();
+                    showTeamList();
+                    alert('관리자 모드가 활성화되었습니다.');
+                } else if (pass) {
+                    alert('비밀번호가 틀렸습니다.');
+                }
+            }
+        });
+
+        setInterval(showNotice, 1000);
+
+        load();
+    </script>
+</body>
+</html>
